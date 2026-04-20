@@ -8,6 +8,17 @@
 [![GitHub Stars](https://img.shields.io/github/stars/Greatbeing/Yogacara.svg)](https://github.com/Greatbeing/Yogacara)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-89%20passing-brightgreen.svg)](https://github.com/Greatbeing/Yogacara)
+[![CI](https://github.com/Greatbeing/Yogacara/actions/workflows/tests.yml/badge.svg)](https://github.com/Greatbeing/Yogacara/actions)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+<p align="center">
+  <a href="#-what-is-yogacara">What is Yogacara</a> •
+  <a href="#-philosophy">Philosophy</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-awakening-levels">Awakening Levels</a> •
+  <a href="#-contributing">Contributing</a>
+</p>
 
 ---
 

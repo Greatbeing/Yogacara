@@ -249,7 +249,7 @@ class EmergenceEngine:
     
     # Emergence thresholds (base values for dynamic adjustment)
     MIN_SEEDS_FOR_EMERGENCE = 3
-    BASE_SYERGY_THRESHOLD = 0.6
+    BASE_SYNERGY_THRESHOLD = 0.6
     BASE_STRENGTH_THRESHOLD = 0.7
     
     # Critical region parameters
@@ -270,7 +270,7 @@ class EmergenceEngine:
     def __init__(self):
         # 动态阈值计算器
         self.synergy_threshold_calc = DynamicThreshold(
-            self.BASE_SYERGY_THRESHOLD, sensitivity=0.15
+            self.BASE_SYNERGY_THRESHOLD, sensitivity=0.15
         )
         self.strength_threshold_calc = DynamicThreshold(
             self.BASE_STRENGTH_THRESHOLD, sensitivity=0.1

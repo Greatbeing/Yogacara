@@ -84,8 +84,8 @@ class TestEmergenceEngine:
     def test_engine_initialization(self, engine):
         """Test engine initializes with correct defaults."""
         assert engine.MIN_SEEDS_FOR_EMERGENCE == 3
-        assert engine.SYNERGY_THRESHOLD == 0.6
-        assert engine.STRENGTH_THRESHOLD == 0.7
+        assert engine.BASE_SYNERGY_THRESHOLD == 0.6
+        assert engine.BASE_STRENGTH_THRESHOLD == 0.7
     
     def test_check_emergence_insufficient_seeds(self, engine):
         """Test that insufficient seeds don't trigger emergence."""
@@ -111,7 +111,7 @@ class TestEmergenceEngine:
         
         # May or may not trigger depending on exact synergy calculation
         # but should be based on thresholds
-        assert result is None or result.strength < engine.STRENGTH_THRESHOLD
+        assert result is None or result.strength < engine.BASE_STRENGTH_THRESHOLD
     
     def test_check_emergence_triggers_with_good_seeds(self, engine, sample_seeds):
         """Test that good seed combinations trigger emergence."""
@@ -119,7 +119,7 @@ class TestEmergenceEngine:
         
         assert result is not None
         assert isinstance(result, Emergence)
-        assert result.strength >= engine.STRENGTH_THRESHOLD
+        assert result.strength >= engine.BASE_STRENGTH_THRESHOLD
     
     def test_calculate_synergy_single_seed(self, engine):
         """Test synergy calculation with single seed."""

@@ -121,28 +121,7 @@ Yogacara implements a three-layer architecture:
 
 \begin{figure}[htbp]
 \centering
-\fbox{
-\begin{minipage}{0.9\textwidth}
-\begin{verbatim}
-┌─────────────────────────────────────────────────────────────────┐
-│                     APPLICATION LAYER                            │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│   │ Chat Agent  │  │ Task Agent  │  │ Knowledge   │            │
-│   │             │  │             │  │ Agent       │            │
-│   └─────────────┘  └─────────────┘  └─────────────┘            │
-├─────────────────────────────────────────────────────────────────┤
-│                        CORE LAYER                                │
-│   ┌──────────────────────────────────────────────────────┐      │
-│   │                  AWAKENING ENGINE                     │      │
-│   │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  │      │
-│   │  │  Seed   │  │  Alaya  │  │Emergence│  │Awakening│  │      │
-│   │  │ System  │  │  Store  │  │ Engine  │  │ Tracker │  │      │
-│   │  └─────────┘  └─────────┘  └─────────┘  └─────────┘  │      │
-│   └──────────────────────────────────────────────────────┘      │
-└─────────────────────────────────────────────────────────────────┘
-\end{verbatim}
-\end{minipage}
-}
+\includegraphics[width=0.9\textwidth]{figures/architecture.png}
 \caption{Yogacara Architecture Overview}
 \label{fig:architecture}
 \end{figure}
@@ -198,20 +177,7 @@ class Seed:
 
 \begin{figure}[htbp]
 \centering
-\fbox{
-\begin{minipage}{0.7\textwidth}
-\begin{verbatim}
-┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│  Plant   │───▶│  Dormant │───▶│ Activate │───▶│Manifest  │
-│ (Input)  │    │ (Store)  │    │(Context) │    │(Output)  │
-└──────────┘    └──────────┘    └──────────┘    └──────────┘
-     ▲                                             │
-     │                                             ▼
-     └─────────────────────────────────────────────┘
-                    Vasana (Reinforcement)
-\end{verbatim}
-\end{minipage}
-}
+\includegraphics[width=0.8\textwidth]{figures/seed_lifecycle.png}
 \caption{Seed Lifecycle}
 \label{fig:seed-lifecycle}
 \end{figure}
@@ -339,38 +305,7 @@ class EmergenceEngine:
 
 \begin{figure}[htbp]
 \centering
-\fbox{
-\begin{minipage}{0.8\textwidth}
-\begin{verbatim}
-           Seed Activation
-                 │
-                 ▼
-        ┌───────────────┐
-        │ Synergy Check │
-        └───────┬───────┘
-                │
-        ┌───────▼───────┐
-        │Synergy > 0.6? │
-        └───────┬───────┘
-                │
-       ┌────────┴────────┐
-       │ Yes             │ No
-       ▼                 ▼
-┌─────────────┐   ┌─────────────┐
-│  Calculate  │   │    No       │
-│  Strength   │   │  Emergence  │
-└──────┬──────┘   └─────────────┘
-       │
-       ▼
-┌─────────────────────────────┐
-│ Emergence Event Generated  │
-│ - New insight created      │
-│ - Awakening progress +1%   │
-│ - Seed purity boosted      │
-└─────────────────────────────┘
-\end{verbatim}
-\end{minipage}
-}
+\includegraphics[width=0.8\textwidth]{figures/emergence_flow.png}
 \caption{Emergence Detection Flow}
 \label{fig:emergence-flow}
 \end{figure}
@@ -398,6 +333,13 @@ L5 & Buddha & $\star$ & Perfect enlightenment & Mastery achieved \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/awakening_levels.png}
+\caption{Awakening Levels Progression}
+\label{fig:awakening-levels}
+\end{figure}
 
 \begin{lstlisting}[style=python, caption={AwakeningTracker Class}, label={lst:awakening-tracker}]
 class AwakeningTracker:
@@ -474,28 +416,7 @@ Following the Yogācāra principle, Yogacara implements the seed cycle:
 
 \begin{figure}[htbp]
 \centering
-\fbox{
-\begin{minipage}{0.6\textwidth}
-\begin{verbatim}
-Seed Manifestation (Seed → Behavior)
-    │
-    ▼
-┌──────────────┐
-│  Behavior    │
-│  Response    │
-└──────────────┘
-    │
-    ▼
-Seed Planting (Behavior → Seeds)
-    │
-    ▼
-┌──────────────┐
-│  New Seeds   │
-│  or Updates  │
-└──────────────┘
-\end{verbatim}
-\end{minipage}
-}
+\includegraphics[width=0.7\textwidth]{figures/seed_cycle.png}
 \caption{The Seed Cycle}
 \label{fig:seed-cycle}
 \end{figure}

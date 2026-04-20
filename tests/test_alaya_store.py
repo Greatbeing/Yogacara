@@ -11,8 +11,8 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.alaya_store import AlayaStore
-from core.seed_system import Seed, SeedType
+from yogacara.core.alaya_store import AlayaStore
+from yogacara.core.seed_system import Seed, SeedType
 
 
 @pytest.fixture

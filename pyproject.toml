@@ -75,7 +75,7 @@ Changelog = "https://github.com/yogacara/yogacara/blob/main/CHANGELOG.md"
 yogacara = "yogacara.cli:main"
 
 [tool.setuptools]
-packages = ["yogacara", "yogacara.core", "yogacara.adapters"]
+packages = ["yogacara", "yogacara.core"]
 
 [tool.setuptools.package-data]
 yogacara = ["py.typed"]

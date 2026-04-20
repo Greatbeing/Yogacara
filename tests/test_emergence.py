@@ -9,8 +9,8 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.emergence import EmergenceEngine, Emergence, EmergenceType
-from core.seed_system import Seed, SeedType
+from yogacara.core.emergence import EmergenceEngine, Emergence, EmergenceType
+from yogacara.core.seed_system import Seed, SeedType
 
 
 @pytest.fixture

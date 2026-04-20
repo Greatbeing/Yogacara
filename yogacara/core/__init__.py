@@ -8,13 +8,10 @@ This package implements the core components of the Yogacara framework:
 - Awakening Tracker: Progress tracking through awakening levels
 """
 
-from core.seed_system import Seed, SeedType, SeedSystem
-from core.alaya_store import AlayaStore
-from core.emergence import EmergenceEngine, Emergence, EmergenceType
-from core.awakening import AwakeningTracker, AwakeningLevel, AwakeningProgress
-
-__version__ = "0.1.0"
-__author__ = "Juexin"
+from .seed_system import Seed, SeedType, SeedSystem
+from .alaya_store import AlayaStore
+from .emergence import EmergenceEngine, Emergence, EmergenceType
+from .awakening import AwakeningTracker, AwakeningLevel, AwakeningProgress
 
 __all__ = [
     "Seed",

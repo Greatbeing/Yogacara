@@ -1,0 +1,31 @@
+# Core dependencies
+pydantic>=2.0.0
+pyyaml>=6.0
+
+# Database
+# sqlite3 is built-in, no additional install needed
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.0  # For async testing
+
+# Development
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0.0
+flake8>=6.0.0
+pre-commit>=3.0.0
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=2.0.0
+myst-parser>=2.0.0
+
+# CLI
+click>=8.0.0
+rich>=13.0.0
+
+# Utilities
+python-dateutil>=2.8.0

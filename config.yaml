@@ -1,0 +1,53 @@
+# Yogacara Configuration File
+# This file contains the default configuration for the Yogacara framework.
+
+seed_system:
+  # Minimum purity threshold for accepting new seeds (0.0-1.0)
+  purity_threshold: 0.3
+  
+  # Decay rate per day for seed purity (0.0-1.0)
+  weight_decay_rate: 0.01
+  
+  # Maximum number of seeds to store
+  max_seeds: 10000
+
+alaya_store:
+  # Path to SQLite database file
+  db_path: "alaya.db"
+  
+  # Enable automatic backup
+  auto_backup: false
+  
+  # Directory for backup files
+  backup_dir: "backups"
+  
+  # Enable FTS5 full-text search
+  fts_enabled: true
+
+emergence:
+  # Minimum number of seeds required for emergence check
+  min_seeds: 3
+  
+  # Minimum synergy score to trigger emergence (0.0-1.0)
+  synergy_threshold: 0.6
+  
+  # Minimum strength score to trigger emergence (0.0-1.0)
+  strength_threshold: 0.7
+  
+  # Steps between emergence checks
+  emergence_cooldown: 10
+
+awakening:
+  # Steps between level up checks
+  level_up_cooldown: 100
+  
+  # Progress decay rate per step
+  progress_decay: 0.001
+
+# Logging configuration
+log_level: "INFO"
+log_file: null  # Set to a filename to enable file logging
+log_dir: null    # Set to a directory for log files
+
+# Framework version
+version: "0.1.0"

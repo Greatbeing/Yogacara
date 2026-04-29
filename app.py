@@ -38,10 +38,58 @@ class ConversationContext:
 class YogacaraAgent:
     """Yogacara Agent with conversation and seed management."""
 
-    def __init__(self, api_key: str, model: str = "gpt-4"):
-        self.llm = OpenAIAdapter(api_key=api_key, model=model)
+    def __init__(self, api_key: str, model: str = "openrouter/auto"):
+        from openai import OpenAI
+
+        self.model = model
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            default_headers={
+                "HTTP-Referer": "https://yogacara.github.io",
+                "X-Title": "Yogacara Chat",
+            }
+        )
         self.context = ConversationContext()
         self._load_config()
+
+    def _generate(self, prompt: str, **kwargs) -> "LLMResponse":
+        """Generate text using OpenAI-compatible API."""
+        from yogacara.core.llm.base import LLMResponse
+
+        max_tokens = kwargs.get("max_tokens", 500)
+        temperature = kwargs.get("temperature", 0.8)
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": self._build_system_prompt()},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+
+            choice = response.choices[0]
+            content = choice.message.content or ""
+
+            return LLMResponse(
+                content=content,
+                raw_response={},
+                model=self.model,
+                tokens_used=response.usage.total_tokens if hasattr(response, 'usage') else None
+            )
+
+        except Exception as e:
+            return LLMResponse(
+                content="",
+                raw_response={},
+                model=self.model,
+                error=str(e)
+            )
 
     def _load_config(self):
         """Load Yogacara configuration."""
@@ -88,7 +136,7 @@ Guidelines:
             messages.append({"role": msg.role, "content": msg.content})
 
         try:
-            response = self.llm.generate(
+            response = self._generate(
                 prompt=user_message,
                 max_tokens=1000,
                 temperature=0.8
@@ -136,7 +184,7 @@ def get_agent() -> YogacaraAgent:
     global agent
     if agent is None:
         api_key = os.environ.get("OPENAI_API_KEY", "")
-        model = os.environ.get("OPENAI_MODEL", "gpt-4")
+        model = os.environ.get("OPENAI_MODEL", "nvidia/nemotron-3-nano-30b-a3b:free")
         agent = YogacaraAgent(api_key=api_key, model=model)
     return agent
 

@@ -217,6 +217,67 @@ class TestAlayaStore:
         store.plant_seed(Seed(type=SeedType.WISDOM, content="High purity", purity=0.9))
         
         high_purity = store.get_high_purity_seeds(threshold=0.8)
-        
+
         assert len(high_purity) == 1
         assert "High purity" in high_purity[0].content
+
+    def test_export_seeds_json(self, temp_db):
+        """Test exporting seeds to JSON."""
+        store = AlayaStore(db_path=temp_db)
+        for i in range(5):
+            store.plant_seed(Seed(type=SeedType.WISDOM, content=f"Seed {i}"))
+
+        json_path = temp_db + ".json"
+        result = store.export_seeds(json_path, format="json")
+
+        assert result == 5
+        assert Path(json_path).exists()
+
+        Path(json_path).unlink(missing_ok=True)
+
+    def test_import_seeds_json(self, temp_db):
+        """Test importing seeds from JSON."""
+        import json
+
+        store = AlayaStore(db_path=temp_db)
+
+        seed_data = {
+            "version": "1.0",
+            "exported_at": "2024-01-01T00:00:00",
+            "total_seeds": 2,
+            "seeds": [
+                {
+                    "id": "test-001",
+                    "type": "wisdom",
+                    "content": "Imported wisdom",
+                    "purity": 0.85,
+                    "weight": 0.6,
+                    "created_at": "2024-01-01T00:00:00",
+                    "source": "import",
+                    "vasana": 1,
+                    "metadata": {}
+                },
+                {
+                    "id": "test-002",
+                    "type": "compassion",
+                    "content": "Imported compassion",
+                    "purity": 0.8,
+                    "weight": 0.5,
+                    "created_at": "2024-01-01T00:00:00",
+                    "source": "import",
+                    "vasana": 0,
+                    "metadata": {}
+                }
+            ]
+        }
+
+        json_path = temp_db + "_import.json"
+        with open(json_path, "w") as f:
+            json.dump(seed_data, f)
+
+        result = store.import_seeds(json_path, format="json")
+
+        assert result["imported"] == 2
+        assert store.count_seeds() == 2
+
+        Path(json_path).unlink(missing_ok=True)

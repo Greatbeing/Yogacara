@@ -264,5 +264,128 @@ class TestEmergenceEngine:
         
         synergy = engine.calculate_synergy(seeds)
         strength = engine._calculate_strength(seeds, synergy)
-        
+
         assert strength <= 1.0
+
+
+class TestPowerLawDetector:
+    """Test cases for PowerLawDetector class."""
+
+    def test_calculate_alpha_valid(self, engine):
+        """Test alpha calculation with valid data."""
+        values = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.15]
+        alpha = engine.power_law_detector.calculate_alpha(values)
+
+        assert alpha is not None
+        assert 1.5 <= alpha <= 3.5
+
+    def test_calculate_alpha_insufficient_data(self, engine):
+        """Test alpha returns None with insufficient data."""
+        values = [1.0, 0.9]
+        alpha = engine.power_law_detector.calculate_alpha(values)
+
+        assert alpha is None
+
+    def test_detect_emergence_likelihood(self, engine):
+        """Test emergence likelihood detection."""
+        seeds = [
+            Seed(type=SeedType.WISDOM, content="S1", purity=0.9),
+            Seed(type=SeedType.WISDOM, content="S2", purity=0.8),
+            Seed(type=SeedType.WISDOM, content="S3", purity=0.7),
+            Seed(type=SeedType.WISDOM, content="S4", purity=0.6),
+            Seed(type=SeedType.WISDOM, content="S5", purity=0.5),
+            Seed(type=SeedType.WISDOM, content="S6", purity=0.4),
+            Seed(type=SeedType.WISDOM, content="S7", purity=0.3),
+            Seed(type=SeedType.WISDOM, content="S8", purity=0.2),
+            Seed(type=SeedType.WISDOM, content="S9", purity=0.15),
+            Seed(type=SeedType.WISDOM, content="S10", purity=0.1),
+        ]
+
+        likelihood = engine.power_law_detector.detect_emergence_likelihood(seeds)
+
+        assert 0.0 <= likelihood <= 1.0
+
+    def test_get_alpha(self, engine):
+        """Test getting alpha from seeds."""
+        seeds = [
+            Seed(type=SeedType.WISDOM, content="S1", purity=0.9),
+            Seed(type=SeedType.WISDOM, content="S2", purity=0.8),
+            Seed(type=SeedType.WISDOM, content="S3", purity=0.7),
+            Seed(type=SeedType.WISDOM, content="S4", purity=0.6),
+            Seed(type=SeedType.WISDOM, content="S5", purity=0.5),
+            Seed(type=SeedType.WISDOM, content="S6", purity=0.4),
+            Seed(type=SeedType.WISDOM, content="S7", purity=0.3),
+            Seed(type=SeedType.WISDOM, content="S8", purity=0.2),
+            Seed(type=SeedType.WISDOM, content="S9", purity=0.15),
+            Seed(type=SeedType.WISDOM, content="S10", purity=0.1),
+        ]
+
+        alpha = engine.power_law_detector.get_alpha(seeds)
+
+        assert alpha is None or 1.5 <= alpha <= 3.5
+
+
+class TestCriticalFluctuationDetector:
+    """Test cases for CriticalFluctuationDetector class."""
+
+    def test_record_state(self, engine):
+        """Test recording system state."""
+        engine.fluctuation_detector.record_state(
+            purity_std=0.2,
+            synergy_var=0.1,
+            correlation=0.8
+        )
+
+        assert len(engine.fluctuation_detector.history) == 1
+
+    def test_detect_critical_fluctuation_insufficient_history(self, engine):
+        """Test detection with insufficient history."""
+        is_critical, criticality = engine.fluctuation_detector.detect_critical_fluctuation()
+
+        assert is_critical is False
+        assert criticality == 0.0
+
+    def test_detect_critical_fluctuation_with_history(self, engine):
+        """Test detection with sufficient history."""
+        for i in range(15):
+            engine.fluctuation_detector.record_state(
+                purity_std=0.2 + (i * 0.01),
+                synergy_var=0.1 + (i * 0.01),
+                correlation=0.7 + (i * 0.01)
+            )
+
+        is_critical, criticality = engine.fluctuation_detector.detect_critical_fluctuation()
+
+        assert isinstance(is_critical, bool)
+        assert 0.0 <= criticality <= 1.0
+
+
+class TestDynamicThreshold:
+    """Test cases for DynamicThreshold class."""
+
+    def test_calculate(self, engine):
+        """Test dynamic threshold calculation."""
+        threshold = engine.synergy_threshold_calc.calculate(
+            system_entropy=0.5,
+            seed_correlation=0.7
+        )
+
+        assert 0.1 <= threshold <= 0.9
+
+    def test_calculate_low_entropy(self, engine):
+        """Test threshold with low entropy (ordered system)."""
+        threshold = engine.synergy_threshold_calc.calculate(
+            system_entropy=0.1,
+            seed_correlation=0.5
+        )
+
+        assert threshold >= engine.BASE_SYNERGY_THRESHOLD
+
+    def test_calculate_high_entropy(self, engine):
+        """Test threshold with high entropy (chaotic system)."""
+        threshold = engine.synergy_threshold_calc.calculate(
+            system_entropy=0.9,
+            seed_correlation=0.5
+        )
+
+        assert threshold <= engine.BASE_SYNERGY_THRESHOLD

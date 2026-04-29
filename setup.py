@@ -61,6 +61,11 @@ setup(
             "click>=8.0.0",
             "rich>=13.0.0",
         ],
+        "server": [
+            "flask>=3.0.0",
+            "flask-cors>=4.0.0",
+            "openai>=1.0.0",
+        ],
     },
     entry_points={
         "console_scripts": [

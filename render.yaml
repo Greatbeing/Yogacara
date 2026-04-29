@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: yogacara-chat
+    env: python
+    buildCommand: pip install -e ".[server]"
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FLASK_DEBUG
+        value: false
+      - key: PORT
+        value: "10000"

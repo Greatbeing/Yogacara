@@ -106,35 +106,35 @@ class AlayaStore:
     def plant_seed(self, seed: Seed) -> bool:
         """
         Plant a new seed into the storehouse.
-        
+
         In Yogacara terms: 种子入库
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                INSERT OR REPLACE INTO seeds
-                (id, type, content, purity, weight, created_at, source, vasana, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                seed.id,
-                seed.type.value,
-                seed.content,
-                seed.purity,
-                seed.weight,
-                seed.created_at.isoformat(),
-                seed.source,
-                seed.vasana,
-                json.dumps(seed.metadata)
-            ))
-            
-            conn.commit()
-            conn.close()
-            return True
-            
-        except Exception as e:
-            print(f"Error planting seed: {e}")
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT OR REPLACE INTO seeds
+                    (id, type, content, purity, weight, created_at, source, vasana, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    seed.id,
+                    seed.type.value,
+                    seed.content,
+                    seed.purity,
+                    seed.weight,
+                    seed.created_at.isoformat(),
+                    seed.source,
+                    seed.vasana,
+                    json.dumps(seed.metadata)
+                ))
+                cursor.execute('''
+                    INSERT OR REPLACE INTO seeds_fts (id, content, source)
+                    VALUES (?, ?, ?)
+                ''', (seed.id, seed.content, seed.source))
+                return True
+        except sqlite3.IntegrityError:
+            return False
+        except sqlite3.OperationalError:
             return False
     
     def activate_seeds(
@@ -145,145 +145,139 @@ class AlayaStore:
     ) -> List[Seed]:
         """
         Retrieve relevant seeds based on context.
-        
+
         In Yogacara terms: 种子生现行 (seeds manifesting in current behavior)
-        
+
         Uses FTS5 for semantic search and returns most relevant seeds.
         Also increments vasana (habit energy) for each activated seed.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Build query
-        type_filter = ""
-        if seed_types:
-            type_list = ",".join(f"'{t.value}'" for t in seed_types)
-            type_filter = f"AND type IN ({type_list})"
-        
-        # FTS5 search for relevant seeds
-        cursor.execute(f'''
-            SELECT s.id, s.type, s.content, s.purity, s.weight,
-                   s.created_at, s.source, s.vasana, s.metadata
-            FROM seeds s
-            JOIN seeds_fts fts ON s.id = fts.id
-            WHERE seeds_fts MATCH ?
-            {type_filter}
-            ORDER BY s.purity DESC, s.weight DESC
-            LIMIT ?
-        ''', (context, limit))
-        
-        rows = cursor.fetchall()
-        
-        seeds = []
-        for row in rows:
-            seed = Seed(
-                id=row[0],
-                type=SeedType(row[1]),
-                content=row[2],
-                purity=row[3],
-                weight=row[4],
-                created_at=datetime.fromisoformat(row[5]),
-                source=row[6],
-                vasana=row[7],
-                metadata=json.loads(row[8]) if row[8] else {}
-            )
-            seeds.append(seed)
-            
-            # Increment vasana (habit energy)
-            cursor.execute('''
-                UPDATE seeds SET vasana = vasana + 1 WHERE id = ?
-            ''', (seed.id,))
-        
-        conn.commit()
-        conn.close()
-        
-        return seeds
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            type_filter = ""
+            if seed_types:
+                type_list = ",".join(f"'{t.value}'" for t in seed_types)
+                type_filter = f"AND type IN ({type_list})"
+
+            cursor.execute(f'''
+                SELECT s.id, s.type, s.content, s.purity, s.weight,
+                       s.created_at, s.source, s.vasana, s.metadata
+                FROM seeds s
+                JOIN seeds_fts fts ON s.id = fts.id
+                WHERE seeds_fts MATCH ?
+                {type_filter}
+                ORDER BY s.purity DESC, s.weight DESC
+                LIMIT ?
+            ''', (context, limit))
+
+            rows = cursor.fetchall()
+
+            seed_ids = [row[0] for row in rows]
+
+            for seed_id in seed_ids:
+                cursor.execute('''
+                    UPDATE seeds SET vasana = vasana + 1 WHERE id = ?
+                ''', (seed_id,))
+
+            if not seed_ids:
+                return []
+
+            placeholders = ",".join("?" * len(seed_ids))
+            cursor.execute(f'''
+                SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
+                FROM seeds
+                WHERE id IN ({placeholders})
+            ''', seed_ids)
+
+            updated_rows = cursor.fetchall()
+
+            return [
+                Seed(
+                    id=row[0],
+                    type=SeedType(row[1]),
+                    content=row[2],
+                    purity=row[3],
+                    weight=row[4],
+                    created_at=datetime.fromisoformat(row[5]),
+                    source=row[6],
+                    vasana=row[7],
+                    metadata=json.loads(row[8]) if row[8] else {}
+                )
+                for row in updated_rows
+            ]
     
     def get_all_seeds(self) -> List[Seed]:
         """Get all seeds from storehouse"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
-            FROM seeds
-            ORDER BY created_at DESC
-        ''')
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        return [
-            Seed(
-                id=row[0],
-                type=SeedType(row[1]),
-                content=row[2],
-                purity=row[3],
-                weight=row[4],
-                created_at=datetime.fromisoformat(row[5]),
-                source=row[6],
-                vasana=row[7],
-                metadata=json.loads(row[8]) if row[8] else {}
-            )
-            for row in rows
-        ]
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
+                FROM seeds
+                ORDER BY created_at DESC
+            ''')
+
+            rows = cursor.fetchall()
+
+            return [
+                Seed(
+                    id=row[0],
+                    type=SeedType(row[1]),
+                    content=row[2],
+                    purity=row[3],
+                    weight=row[4],
+                    created_at=datetime.fromisoformat(row[5]),
+                    source=row[6],
+                    vasana=row[7],
+                    metadata=json.loads(row[8]) if row[8] else {}
+                )
+                for row in rows
+            ]
     
     def get_seed_statistics(self) -> Dict[str, Any]:
         """Get seed distribution statistics"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Total count
-        cursor.execute("SELECT COUNT(*) FROM seeds")
-        total = cursor.fetchone()[0]
-        
-        if total == 0:
-            conn.close()
-            return {"total": 0}
-        
-        # Count by type
-        cursor.execute('''
-            SELECT type, COUNT(*) as count, AVG(purity) as avg_purity
-            FROM seeds
-            GROUP BY type
-        ''')
-        
-        by_type = {}
-        for row in cursor.fetchall():
-            by_type[row[0]] = {
-                "count": row[1],
-                "percentage": round(row[1] / total * 100, 1),
-                "avg_purity": round(row[2], 2)
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT COUNT(*) FROM seeds")
+            total = cursor.fetchone()[0]
+
+            if total == 0:
+                return {"total": 0}
+
+            cursor.execute('''
+                SELECT type, COUNT(*) as count, AVG(purity) as avg_purity
+                FROM seeds
+                GROUP BY type
+            ''')
+
+            by_type = {}
+            for row in cursor.fetchall():
+                by_type[row[0]] = {
+                    "count": row[1],
+                    "percentage": round(row[1] / total * 100, 1),
+                    "avg_purity": round(row[2], 2)
+                }
+
+            cursor.execute("SELECT AVG(vasana) FROM seeds")
+            avg_vasana = cursor.fetchone()[0]
+
+            return {
+                "total": total,
+                "by_type": by_type,
+                "avg_vasana": round(avg_vasana, 1) if avg_vasana else 0,
             }
-        
-        # Average vasana
-        cursor.execute("SELECT AVG(vasana) FROM seeds")
-        avg_vasana = cursor.fetchone()[0]
-        
-        conn.close()
-        
-        return {
-            "total": total,
-            "by_type": by_type,
-            "avg_vasana": round(avg_vasana, 1) if avg_vasana else 0,
-        }
     
     def purify_seeds(self, threshold: float = 0.3) -> int:
         """
         Remove low-purity seeds from storehouse.
-        
+
         In Yogacara terms: 种子净化
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("DELETE FROM seeds WHERE purity < ?", (threshold,))
-        removed = cursor.rowcount
-        
-        conn.commit()
-        conn.close()
-        
-        return removed
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM seeds WHERE purity < ?", (threshold,))
+            return cursor.rowcount
     
     def record_emergence(
         self,
@@ -293,49 +287,44 @@ class AlayaStore:
         insight: Optional[str] = None
     ):
         """Record an emergence event"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO emergence_history
-            (timestamp, seed_ids, emergence_type, strength, insight)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            datetime.now().isoformat(),
-            json.dumps(seed_ids),
-            emergence_type,
-            strength,
-            insight
-        ))
-        
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO emergence_history
+                (timestamp, seed_ids, emergence_type, strength, insight)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                datetime.now().isoformat(),
+                json.dumps(seed_ids),
+                emergence_type,
+                strength,
+                insight
+            ))
     
     def get_emergence_history(self, limit: int = 50) -> List[Dict]:
         """Get emergence history"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT timestamp, seed_ids, emergence_type, strength, insight
-            FROM emergence_history
-            ORDER BY timestamp DESC
-            LIMIT ?
-        ''', (limit,))
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        return [
-            {
-                "timestamp": row[0],
-                "seed_ids": json.loads(row[1]),
-                "type": row[2],
-                "strength": row[3],
-                "insight": row[4]
-            }
-            for row in rows
-        ]
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT timestamp, seed_ids, emergence_type, strength, insight
+                FROM emergence_history
+                ORDER BY timestamp DESC
+                LIMIT ?
+            ''', (limit,))
+
+            rows = cursor.fetchall()
+
+            return [
+                {
+                    "timestamp": row[0],
+                    "seed_ids": json.loads(row[1]),
+                    "type": row[2],
+                    "strength": row[3],
+                    "insight": row[4]
+                }
+                for row in rows
+            ]
     
     def update_awakening_progress(
         self,
@@ -344,329 +333,308 @@ class AlayaStore:
         stats: Dict[str, int]
     ):
         """Update awakening progress"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            UPDATE awakening_progress
-            SET level = ?, progress = ?, total_seeds = ?,
-                wisdom_seeds = ?, compassion_seeds = ?,
-                emergence_count = ?, last_updated = ?
-            WHERE id = 1
-        ''', (
-            level,
-            progress,
-            stats.get("total_seeds", 0),
-            stats.get("wisdom_seeds", 0),
-            stats.get("compassion_seeds", 0),
-            stats.get("emergence_count", 0),
-            datetime.now().isoformat()
-        ))
-        
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE awakening_progress
+                SET level = ?, progress = ?, total_seeds = ?,
+                    wisdom_seeds = ?, compassion_seeds = ?,
+                    emergence_count = ?, last_updated = ?
+                WHERE id = 1
+            ''', (
+                level,
+                progress,
+                stats.get("total_seeds", 0),
+                stats.get("wisdom_seeds", 0),
+                stats.get("compassion_seeds", 0),
+                stats.get("emergence_count", 0),
+                datetime.now().isoformat()
+            ))
     
     def get_awakening_progress(self) -> Dict[str, Any]:
         """Get current awakening progress"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT level, progress, total_seeds, wisdom_seeds,
-                   compassion_seeds, emergence_count, last_updated
-            FROM awakening_progress
-            WHERE id = 1
-        ''')
-        
-        row = cursor.fetchone()
-        conn.close()
-        
-        if row:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT level, progress, total_seeds, wisdom_seeds,
+                       compassion_seeds, emergence_count, last_updated
+                FROM awakening_progress
+                WHERE id = 1
+            ''')
+
+            row = cursor.fetchone()
+
+            if row:
+                return {
+                    "level": row[0],
+                    "progress": row[1],
+                    "total_seeds": row[2],
+                    "wisdom_seeds": row[3],
+                    "compassion_seeds": row[4],
+                    "emergence_count": row[5],
+                    "last_updated": row[6]
+                }
+
             return {
-                "level": row[0],
-                "progress": row[1],
-                "total_seeds": row[2],
-                "wisdom_seeds": row[3],
-                "compassion_seeds": row[4],
-                "emergence_count": row[5],
-                "last_updated": row[6]
+                "level": "L0",
+                "progress": 0.0,
+                "total_seeds": 0,
+                "wisdom_seeds": 0,
+                "compassion_seeds": 0,
+                "emergence_count": 0,
+                "last_updated": datetime.now().isoformat()
             }
-        
-        return {
-            "level": "L0",
-            "progress": 0.0,
-            "total_seeds": 0,
-            "wisdom_seeds": 0,
-            "compassion_seeds": 0,
-            "emergence_count": 0,
-            "last_updated": datetime.now().isoformat()
-        }
 
     def get_seed_by_id(self, seed_id: str) -> Optional[Seed]:
         """
         Retrieve a specific seed by ID.
-        
+
         Args:
             seed_id: The unique identifier of the seed
-            
+
         Returns:
             Seed if found, None otherwise
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
-            FROM seeds
-            WHERE id = ?
-        ''', (seed_id,))
-        
-        row = cursor.fetchone()
-        conn.close()
-        
-        if row:
-            return Seed(
-                id=row[0],
-                type=SeedType(row[1]),
-                content=row[2],
-                purity=row[3],
-                weight=row[4],
-                created_at=datetime.fromisoformat(row[5]),
-                source=row[6],
-                vasana=row[7],
-                metadata=json.loads(row[8]) if row[8] else {}
-            )
-        
-        return None
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
+                FROM seeds
+                WHERE id = ?
+            ''', (seed_id,))
+
+            row = cursor.fetchone()
+
+            if row:
+                return Seed(
+                    id=row[0],
+                    type=SeedType(row[1]),
+                    content=row[2],
+                    purity=row[3],
+                    weight=row[4],
+                    created_at=datetime.fromisoformat(row[5]),
+                    source=row[6],
+                    vasana=row[7],
+                    metadata=json.loads(row[8]) if row[8] else {}
+                )
+
+            return None
     
     def count_seeds(self) -> int:
         """
         Count total seeds in the storehouse.
-        
+
         Returns:
             Total number of seeds
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT COUNT(*) FROM seeds")
-        count = cursor.fetchone()[0]
-        
-        conn.close()
-        return count
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM seeds")
+            return cursor.fetchone()[0]
     
     def count_seeds_by_type(self) -> Dict[SeedType, int]:
         """
         Count seeds grouped by type.
-        
+
         Returns:
             Dictionary mapping SeedType to count
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT type, COUNT(*) as count
-            FROM seeds
-            GROUP BY type
-        ''')
-        
-        counts = {}
-        for row in cursor.fetchall():
-            counts[SeedType(row[0])] = row[1]
-        
-        # Ensure all types are present
-        for seed_type in SeedType:
-            if seed_type not in counts:
-                counts[seed_type] = 0
-        
-        conn.close()
-        return counts
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT type, COUNT(*) as count
+                FROM seeds
+                GROUP BY type
+            ''')
+
+            counts = {}
+            for row in cursor.fetchall():
+                counts[SeedType(row[0])] = row[1]
+
+            for seed_type in SeedType:
+                if seed_type not in counts:
+                    counts[seed_type] = 0
+
+            return counts
     
     def delete_seed(self, seed_id: str) -> bool:
         """
         Delete a seed by ID.
-        
+
         Args:
             seed_id: The unique identifier of the seed
-            
+
         Returns:
             True if seed was deleted, False otherwise
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("DELETE FROM seeds WHERE id = ?", (seed_id,))
-        deleted = cursor.rowcount > 0
-        
-        conn.commit()
-        conn.close()
-        
-        return deleted
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM seeds WHERE id = ?", (seed_id,))
+            deleted = cursor.rowcount > 0
+            if deleted:
+                cursor.execute("DELETE FROM seeds_fts WHERE id = ?", (seed_id,))
+            return deleted
     
     def clear_all_seeds(self) -> None:
         """
         Delete all seeds from the storehouse.
-        
+
         WARNING: This action cannot be undone.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("DELETE FROM seeds")
-        
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM seeds")
+            cursor.execute("DELETE FROM seeds_fts")
     
     def search_seeds(self, query: str, limit: int = 10) -> List[Seed]:
         """
         Full-text search for seeds.
-        
+
         Args:
             query: Search query
             limit: Maximum number of results
-            
+
         Returns:
             List of matching seeds
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
-            FROM seeds
-            WHERE content LIKE ?
-            ORDER BY purity DESC
-            LIMIT ?
-        ''', (f"%{query}%", limit))
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        return [
-            Seed(
-                id=row[0],
-                type=SeedType(row[1]),
-                content=row[2],
-                purity=row[3],
-                weight=row[4],
-                created_at=datetime.fromisoformat(row[5]),
-                source=row[6],
-                vasana=row[7],
-                metadata=json.loads(row[8]) if row[8] else {}
-            )
-            for row in rows
-        ]
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
+                FROM seeds
+                WHERE content LIKE ?
+                ORDER BY purity DESC
+                LIMIT ?
+            ''', (f"%{query}%", limit))
+
+            rows = cursor.fetchall()
+
+            return [
+                Seed(
+                    id=row[0],
+                    type=SeedType(row[1]),
+                    content=row[2],
+                    purity=row[3],
+                    weight=row[4],
+                    created_at=datetime.fromisoformat(row[5]),
+                    source=row[6],
+                    vasana=row[7],
+                    metadata=json.loads(row[8]) if row[8] else {}
+                )
+                for row in rows
+            ]
     
     def get_recent_seeds(self, limit: int = 10) -> List[Seed]:
         """
         Get the most recently planted seeds.
-        
+
         Args:
             limit: Maximum number of seeds to return
-            
+
         Returns:
             List of recent seeds
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
-            FROM seeds
-            ORDER BY created_at DESC
-            LIMIT ?
-        ''', (limit,))
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        return [
-            Seed(
-                id=row[0],
-                type=SeedType(row[1]),
-                content=row[2],
-                purity=row[3],
-                weight=row[4],
-                created_at=datetime.fromisoformat(row[5]),
-                source=row[6],
-                vasana=row[7],
-                metadata=json.loads(row[8]) if row[8] else {}
-            )
-            for row in rows
-        ]
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
+                FROM seeds
+                ORDER BY created_at DESC
+                LIMIT ?
+            ''', (limit,))
+
+            rows = cursor.fetchall()
+
+            return [
+                Seed(
+                    id=row[0],
+                    type=SeedType(row[1]),
+                    content=row[2],
+                    purity=row[3],
+                    weight=row[4],
+                    created_at=datetime.fromisoformat(row[5]),
+                    source=row[6],
+                    vasana=row[7],
+                    metadata=json.loads(row[8]) if row[8] else {}
+                )
+                for row in rows
+            ]
     
     def get_high_purity_seeds(self, threshold: float = 0.8) -> List[Seed]:
         """
         Get seeds with purity above threshold.
-        
+
         Args:
             threshold: Minimum purity value (0.0-1.0)
-            
+
         Returns:
             List of high purity seeds
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
-            FROM seeds
-            WHERE purity >= ?
-            ORDER BY purity DESC
-        ''', (threshold,))
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        return [
-            Seed(
-                id=row[0],
-                type=SeedType(row[1]),
-                content=row[2],
-                purity=row[3],
-                weight=row[4],
-                created_at=datetime.fromisoformat(row[5]),
-                source=row[6],
-                vasana=row[7],
-                metadata=json.loads(row[8]) if row[8] else {}
-            )
-            for row in rows
-        ]
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, type, content, purity, weight, created_at, source, vasana, metadata
+                FROM seeds
+                WHERE purity >= ?
+                ORDER BY purity DESC
+            ''', (threshold,))
+
+            rows = cursor.fetchall()
+
+            return [
+                Seed(
+                    id=row[0],
+                    type=SeedType(row[1]),
+                    content=row[2],
+                    purity=row[3],
+                    weight=row[4],
+                    created_at=datetime.fromisoformat(row[5]),
+                    source=row[6],
+                    vasana=row[7],
+                    metadata=json.loads(row[8]) if row[8] else {}
+                )
+                for row in rows
+            ]
     
     def update_seed(self, seed: Seed) -> bool:
         """
         Update an existing seed.
-        
+
         Args:
             seed: The seed to update
-            
+
         Returns:
             True if seed was updated, False otherwise
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            UPDATE seeds
-            SET type = ?, content = ?, purity = ?, weight = ?,
-                source = ?, vasana = ?, metadata = ?
-            WHERE id = ?
-        ''', (
-            seed.type.value,
-            seed.content,
-            seed.purity,
-            seed.weight,
-            seed.source,
-            seed.vasana,
-            json.dumps(seed.metadata),
-            seed.id
-        ))
-        
-        updated = cursor.rowcount > 0
-        
-        conn.commit()
-        conn.close()
-        
-        return updated
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE seeds
+                SET type = ?, content = ?, purity = ?, weight = ?,
+                    source = ?, vasana = ?, metadata = ?
+                WHERE id = ?
+            ''', (
+                seed.type.value,
+                seed.content,
+                seed.purity,
+                seed.weight,
+                seed.source,
+                seed.vasana,
+                json.dumps(seed.metadata),
+                seed.id
+            ))
+            updated = cursor.rowcount > 0
+            if updated:
+                cursor.execute('''
+                    UPDATE seeds_fts
+                    SET content = ?, source = ?
+                    WHERE id = ?
+                ''', (seed.content, seed.source, seed.id))
+            return updated
 

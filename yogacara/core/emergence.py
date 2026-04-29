@@ -257,7 +257,21 @@ class EmergenceEngine:
     CRITICAL_ENTROPY_MAX = 0.6
     CRITICAL_CORRELATION_MIN = 0.7
     UNPREDICTABILITY_FACTOR = 0.15  # 临界区域随机性强度
-    
+
+    # Correlation weights
+    CORRELATION_WEIGHTS = {
+        "purity": 0.4,
+        "type": 0.3,
+        "vasana": 0.3
+    }
+
+    # Synergy weights
+    SYNERGY_WEIGHTS = {
+        "diversity": 0.4,
+        "type": 0.4,
+        "purity_alignment": 0.2
+    }
+
     # Seed type synergy matrix
     SYNERGY_MATRIX = {
         (SeedType.WISDOM, SeedType.COMPASSION): 1.0,    # 悲智双运
@@ -421,7 +435,11 @@ class EmergenceEngine:
         else:
             vasana_correlation = 0.0
         
-        return (purity_correlation * 0.4 + type_correlation * 0.3 + vasana_correlation * 0.3)
+        return (
+            purity_correlation * self.CORRELATION_WEIGHTS["purity"] +
+            type_correlation * self.CORRELATION_WEIGHTS["type"] +
+            vasana_correlation * self.CORRELATION_WEIGHTS["vasana"]
+        )
     
     def _calculate_purity_std(self, seeds: List[Seed]) -> float:
         """计算纯度标准差"""
@@ -508,9 +526,9 @@ class EmergenceEngine:
         
         # Combined synergy
         synergy = (
-            diversity_score * 0.4 +
-            type_synergy * 0.4 +
-            purity_alignment * 0.2
+            diversity_score * self.SYNERGY_WEIGHTS["diversity"] +
+            type_synergy * self.SYNERGY_WEIGHTS["type"] +
+            purity_alignment * self.SYNERGY_WEIGHTS["purity_alignment"]
         )
         
         return round(synergy, 2)

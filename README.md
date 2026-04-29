@@ -237,6 +237,57 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
+## 💬 Live Chat Demo
+
+Experience a real conversation with the Yogacara Agent!
+
+[![Chat Demo](https://img.shields.io/badge/Chat-Demo-brightgreen)](https://yogacara-chat.onrender.com/chat)
+[![API Server](https://img.shields.io/badge/API-Server-blue)](https://yogacara-chat.onrender.com/api/health)
+
+### Features
+
+- 🤖 **Real-time AI conversation** powered by GPT-4
+- 🌱 **Seed tracking** - each message plants seeds in your Alaya
+- 🧘 **Awakening progression** - watch your level increase with dialogue
+- ✨ **Emergence events** - insight arises from meaningful exchanges
+- 🔄 **Conversation memory** - context persists across messages
+
+### Deployment
+
+The chat server is deployed on **Render** (free tier).
+
+To deploy your own instance:
+
+```bash
+# 1. Fork this repository
+
+# 2. Create a Render account at https://render.com
+
+# 3. Connect your GitHub repo
+
+# 4. Add environment variable:
+#    OPENAI_API_KEY=sk-...
+
+# 5. Deploy!
+```
+
+Or run locally:
+
+```bash
+# Install with server dependencies
+pip install -e ".[server]"
+
+# Set your OpenAI API key
+export OPENAI_API_KEY=sk-...
+
+# Start the server
+python app.py
+
+# Open http://localhost:5000/chat
+```
+
+---
+
 ## 🙏 Acknowledgments
 
 - 📚 **Yogacara Buddhism** - The philosophical foundation

@@ -118,6 +118,23 @@ class SeedSystem:
     
     def __init__(self):
         self.seeds: Dict[str, Seed] = {}
+
+    def _find_similar_seed(self, content: str, seed_type: SeedType) -> Optional[Seed]:
+        """
+        Find a seed with similar content and same type.
+
+        Args:
+            content: Seed content to match
+            seed_type: Seed type
+
+        Returns:
+            Existing seed if found, None otherwise
+        """
+        content_lower = content.lower()
+        for seed in self.seeds.values():
+            if seed.type == seed_type and seed.content.lower() == content_lower:
+                return seed
+        return None
     
     def create_seed(
         self,
@@ -129,12 +146,16 @@ class SeedSystem:
     ) -> Optional[Seed]:
         """
         Create a new seed.
-        
-        Returns None if seed doesn't meet purity threshold.
+
+        Returns None if seed doesn't meet purity threshold or similar seed exists.
         """
         if purity < self.PURITY_THRESHOLD:
-            return None  # Reject low-quality seed
-        
+            return None
+
+        existing = self._find_similar_seed(content, type)
+        if existing is not None:
+            return None
+
         seed = Seed(
             type=type,
             content=content,
@@ -142,7 +163,7 @@ class SeedSystem:
             source=source,
             **kwargs
         )
-        
+
         self.seeds[seed.id] = seed
         return seed
     

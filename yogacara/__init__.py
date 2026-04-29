@@ -31,6 +31,14 @@ from .core.seed_system import Seed, SeedType, SeedSystem
 from .core.alaya_store import AlayaStore
 from .core.emergence import EmergenceEngine, Emergence, EmergenceType
 from .core.awakening import AwakeningTracker, AwakeningLevel, AwakeningProgress
+from .core.llm import (
+    LLMAdapter,
+    LLMResponse,
+    SeedSuggestion,
+    EmergenceInsight,
+    OpenAIAdapter,
+    SeedGenerator,
+)
 
 __version__ = "0.1.0"
 __author__ = "Juexin"
@@ -57,4 +65,11 @@ __all__ = [
     "AwakeningTracker",
     "AwakeningLevel",
     "AwakeningProgress",
+    # LLM Integration
+    "LLMAdapter",
+    "LLMResponse",
+    "SeedSuggestion",
+    "EmergenceInsight",
+    "OpenAIAdapter",
+    "SeedGenerator",
 ]

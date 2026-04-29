@@ -260,21 +260,59 @@ def stats(db_path: str) -> None:
     try:
         seed_system = SeedSystem()
         store = AlayaStore(db_path)
-        
+
         stats = seed_system.get_statistics()
-        
+
         console.print("\n[bold cyan]=== Yogacara Statistics ===[/bold cyan]\n")
-        
+
         console.print(f"[yellow]Total Seeds:[/yellow] {stats.get('total', 0)}")
         console.print(f"[yellow]Average Purity:[/yellow] {stats.get('avg_purity', 0):.2f}")
         console.print(f"[yellow]Average Vasana:[/yellow] {stats.get('avg_vasana', 0):.1f}")
-        
+
         if stats.get("by_type"):
             console.print("\n[bold]By Type:[/bold]")
             for seed_type, data in stats["by_type"].items():
                 bar = "█" * int(data["percentage"] / 5) + "░" * (20 - int(data["percentage"] / 5))
                 console.print(f"  {seed_type.upper():12} [{bar}] {data['percentage']}% ({data['count']})")
-        
+
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
+@main.command()
+@click.option("--db-path", default="alaya.db", help="Path to database file")
+@click.option("--output", "-o", required=True, help="Output file path")
+@click.option("--format", "-f", default="json", type=click.Choice(["json", "csv"]), help="Export format")
+def export(db_path: str, output: str, format: str) -> None:
+    """Export seeds to a file."""
+    try:
+        store = AlayaStore(db_path)
+
+        count = store.export_seeds(output, format=format)
+
+        console.print(f"[green]✓[/green] Exported {count} seeds to {output}")
+
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
+@main.command()
+@click.option("--db-path", default="alaya.db", help="Path to database file")
+@click.option("--input", "-i", required=True, help="Input file path")
+@click.option("--format", "-f", default="json", type=click.Choice(["json", "csv"]), help="Import format")
+def import_cmd(db_path: str, input: str, format: str) -> None:
+    """Import seeds from a file."""
+    try:
+        store = AlayaStore(db_path)
+
+        result = store.import_seeds(input, format=format)
+
+        console.print(f"[green]✓[/green] Imported {result['imported']} seeds")
+        if result["skipped"] > 0:
+            console.print(f"[yellow]Skipped {result['skipped']} seeds (duplicates)[/yellow]")
+
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         sys.exit(1)

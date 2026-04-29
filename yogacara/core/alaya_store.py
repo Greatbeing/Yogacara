@@ -638,3 +638,128 @@ class AlayaStore:
                 ''', (seed.content, seed.source, seed.id))
             return updated
 
+    def export_seeds(self, file_path: str, format: str = "json") -> int:
+        """
+        Export all seeds to a file.
+
+        Args:
+            file_path: Path to export file
+            format: Export format ("json" or "csv")
+
+        Returns:
+            Number of seeds exported
+        """
+        seeds = self.get_all_seeds()
+
+        if format == "json":
+            return self._export_json(seeds, file_path)
+        elif format == "csv":
+            return self._export_csv(seeds, file_path)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    def _export_json(self, seeds: List[Seed], file_path: str) -> int:
+        """Export seeds to JSON file."""
+        data = {
+            "version": "1.0",
+            "exported_at": datetime.now().isoformat(),
+            "total_seeds": len(seeds),
+            "seeds": [seed.to_dict() for seed in seeds]
+        }
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        return len(seeds)
+
+    def _export_csv(self, seeds: List[Seed], file_path: str) -> int:
+        """Export seeds to CSV file."""
+        import csv
+
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["id", "type", "content", "purity", "weight", "source", "vasana", "created_at"])
+
+            for seed in seeds:
+                writer.writerow([
+                    seed.id,
+                    seed.type.value,
+                    seed.content,
+                    seed.purity,
+                    seed.weight,
+                    seed.source,
+                    seed.vasana,
+                    seed.created_at.isoformat()
+                ])
+
+        return len(seeds)
+
+    def import_seeds(self, file_path: str, format: str = "json") -> Dict[str, int]:
+        """
+        Import seeds from a file.
+
+        Args:
+            file_path: Path to import file
+            format: Import format ("json" or "csv")
+
+        Returns:
+            Dictionary with "imported" and "skipped" counts
+        """
+        if format == "json":
+            return self._import_json(file_path)
+        elif format == "csv":
+            return self._import_csv(file_path)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    def _import_json(self, file_path: str) -> Dict[str, int]:
+        """Import seeds from JSON file."""
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        seeds_data = data.get("seeds", [])
+        imported = 0
+        skipped = 0
+
+        for seed_data in seeds_data:
+            try:
+                seed = Seed.from_dict(seed_data)
+                if self.plant_seed(seed):
+                    imported += 1
+                else:
+                    skipped += 1
+            except (KeyError, ValueError):
+                skipped += 1
+
+        return {"imported": imported, "skipped": skipped}
+
+    def _import_csv(self, file_path: str) -> Dict[str, int]:
+        """Import seeds from CSV file."""
+        import csv
+
+        imported = 0
+        skipped = 0
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    seed = Seed(
+                        id=row["id"],
+                        type=SeedType(row["type"]),
+                        content=row["content"],
+                        purity=float(row["purity"]),
+                        weight=float(row["weight"]),
+                        source=row["source"],
+                        vasana=int(row["vasana"]),
+                        created_at=datetime.fromisoformat(row["created_at"])
+                    )
+                    if self.plant_seed(seed):
+                        imported += 1
+                    else:
+                        skipped += 1
+                except (KeyError, ValueError):
+                    skipped += 1
+
+        return {"imported": imported, "skipped": skipped}
+
